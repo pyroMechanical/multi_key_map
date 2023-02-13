@@ -70,11 +70,7 @@ fn remove_many_test() {
 
 #[test]
 fn from_test() {
-    let map = MultiKeyMap::from([
-        (vec![1, 2], 3),
-        (vec![4, 5], 6),
-        (vec![7, 8, 9], 10)
-    ]);
+    let map = MultiKeyMap::from([(vec![1, 2], 3), (vec![4, 5], 6), (vec![7, 8, 9], 10)]);
     assert_eq!(Some(&3), map.get(&1));
     assert_eq!(Some(&3), map.get(&2));
     assert_eq!(Some(&6), map.get(&4));
@@ -82,4 +78,42 @@ fn from_test() {
     assert_eq!(Some(&10), map.get(&7));
     assert_eq!(Some(&10), map.get(&8));
     assert_eq!(Some(&10), map.get(&9));
+}
+
+#[test]
+fn entry_insert_test() {
+    let mut map = MultiKeyMap::from([(vec![1, 2], 3), (vec![4, 5], 6)]);
+    map.entry(7).or_insert(-1);
+    assert_eq!(Some(&-1), map.get(&7));
+}
+
+#[test]
+fn entry_insert_with_test() {
+    let mut map = MultiKeyMap::from([(vec![1, 2], 3), (vec![4, 5], 6)]);
+    map.entry(7).or_insert_with(|| -1);
+    assert_eq!(Some(&-1), map.get(&7));
+}
+
+#[test]
+fn entry_insert_with_key_test() {
+    let mut map = MultiKeyMap::from([(vec![1, 2], 3), (vec![4, 5], 6)]);
+    map.entry(7).or_insert_with_key(|k| *k + 1);
+    assert_eq!(Some(&8), map.get(&7));
+}
+
+#[test]
+fn entry_modify_test() {
+    let mut map = MultiKeyMap::from([(vec![1, 2], 3), (vec![4, 5], 6)]);
+    map.entry(1).and_modify(|x| *x = *x + 1).or_insert(-1);
+    assert_eq!(Some(&4), map.get(&1));
+}
+
+#[test]
+fn entry_default_test() {
+    let mut map = MultiKeyMap::from([
+        (vec![1, 2], String::from("foo")),
+        (vec![4, 5], String::from("bar")),
+    ]);
+    map.entry(7).or_default();
+    assert_eq!(Some(&String::new()), map.get(&7));
 }

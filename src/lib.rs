@@ -18,8 +18,8 @@
 //!
 //! [`RefCell`]: std::cell::RefCell
 
-pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
-pub use crate::iter::Iter;
+pub use entry::{Entry, OccupiedEntry, VacantEntry};
+pub use iter::Iter;
 use core::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;

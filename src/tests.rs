@@ -3,10 +3,10 @@ use crate::MultiKeyMap;
 #[test]
 fn get_mut_test() {
     let mut map = MultiKeyMap::new();
-    map.insert(1, 2);
+    map.insert(1, "foo".to_string());
     let x = map.get_mut(&1).unwrap();
-    *x = 5;
-    assert_eq!(Some(&5), map.get(&1));
+    *x = "bar".to_string();
+    assert_eq!(Some(&"bar".to_string()), map.get(&1));
 }
 
 #[test]
@@ -19,9 +19,9 @@ fn insert_test() {
 #[test]
 fn insert_many_test() {
     let mut map = MultiKeyMap::new();
-    map.insert_many(vec![1, 2], 3);
-    assert_eq!(Some(&3), map.get(&1));
-    assert_eq!(Some(&3), map.get(&2));
+    map.insert_many(vec![1, 2], "foo".to_string());
+    assert_eq!(Some(&"foo".to_string()), map.get(&1));
+    assert_eq!(Some(&"foo".to_string()), map.get(&2));
 }
 
 #[test]
@@ -65,7 +65,7 @@ fn remove_many_test() {
     let mut map = MultiKeyMap::new();
     map.insert(1, 2);
     map.insert(3, 4);
-    assert_eq!(vec![2, 4], map.remove_many(&[1, 3]));
+    assert_eq!(vec![2, 4], map.remove_many([&1, &3]));
 }
 
 #[test]
@@ -116,13 +116,4 @@ fn entry_default_test() {
     ]);
     map.entry(7).or_default();
     assert_eq!(Some(&String::new()), map.get(&7));
-}
-
-#[test]
-fn example_test() {
-    let mut map: MultiKeyMap<i32, String> =
-        MultiKeyMap::from([(vec![1, 2, 3], "foo".into()), (vec![4, 5], "bar".into())]);
-    map.insert_many(vec![6, 7], "quux".into());
-    map.alias(&7, 8);
-    assert_eq!(map.get(&8), Some(&String::from("quux")));
 }

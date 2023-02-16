@@ -1,6 +1,6 @@
 //! Provides [MultiKeyMap], an associative array that can share one value
 //! across multiple keys without [`Rc`], and provides mutable access
-//! that can never panic at compile time, unlike [`RefCell`].
+//! that will never panic at runtime, unlike [`RefCell`].
 //!
 //! ```
 //! use multi_key_map::MultiKeyMap;
@@ -18,7 +18,8 @@
 //!
 //! [`RefCell`]: std::cell::RefCell
 
-use crate::entry::{Entry, OccupiedEntry, VacantEntry};
+pub use crate::entry::{Entry, OccupiedEntry, VacantEntry};
+pub use crate::iter::Iter;
 use core::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -29,7 +30,7 @@ pub mod entry;
 /// Provides [`Iter`], an iterator over all keys and values. see [`iter`] for more info.
 ///
 /// [`Iter`]: iter::Iter
-/// 
+///
 /// [`iter`]: MultiKeyMap::iter
 pub mod iter;
 #[cfg(test)]
@@ -83,7 +84,7 @@ where
         idx
     }
 
-    pub fn contains_key<Q>(&self, k: &Q) -> bool
+    pub fn contains_key<Q: ?Sized>(&self, k: &Q) -> bool
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -117,7 +118,18 @@ where
     }
     ///Attempts to add a new key to the element at `k`. Returns the new key if `k` is not
     /// in the map.
-    pub fn alias<Q>(&mut self, k: &Q, alias: K) -> Result<&mut V, K>
+    /// ```
+    /// use multi_key_map::MultiKeyMap;
+    /// let mut map = MultiKeyMap::from([
+    ///     (vec!["foo".to_string()], 1),
+    ///     (vec!["quux".to_string()], -2),
+    /// ]);
+    /// let aliased = map.alias("foo", "bar".to_string());
+    /// assert_eq!(aliased, Ok(&mut 1));
+    /// let aliased = map.alias("baz", "xyz".to_string());
+    /// assert_eq!(aliased, Err("xyz".to_string()));
+    /// ```
+    pub fn alias<Q: ?Sized>(&mut self, k: &Q, alias: K) -> Result<&mut V, K>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -134,7 +146,17 @@ where
     }
     ///Attempts to add multiple new keys to the element at `k`. Returns the list of keys if `k` is not
     /// in the map.
-    pub fn alias_many<Q>(&mut self, k: &Q, aliases: Vec<K>) -> Result<&mut V, Vec<K>>
+    /// ```
+    /// use multi_key_map::MultiKeyMap;
+    /// let mut map = MultiKeyMap::from([
+    ///     (vec!["foo".to_string()], 1),
+    /// ]);
+    /// let aliased = map.alias_many("foo", vec!["bar".to_string(), "quux".to_string()]);
+    /// assert_eq!(aliased, Ok(&mut 1));
+    /// let aliased = map.alias_many("baz", vec!["xyz".to_string(), "syzygy".to_string()]);
+    /// assert_eq!(aliased, Err(vec!["xyz".to_string(), "syzygy".to_string()]));
+    /// ```
+    pub fn alias_many<Q: ?Sized>(&mut self, k: &Q, aliases: Vec<K>) -> Result<&mut V, Vec<K>>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -189,7 +211,7 @@ where
     ///Returns a shared reference to the value of the key. Equivalent to [HashMap]::[`get`].
     ///
     /// [`get`]: HashMap::get
-    pub fn get<Q>(&self, k: &Q) -> Option<&V>
+    pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -201,8 +223,16 @@ where
     }
     ///Returns a mutable reference to the value of the key. Equivalent to [HashMap]::[`get_mut`].
     ///
+    /// ```
+    /// use multi_key_map::MultiKeyMap;
+    /// let mut map = MultiKeyMap::new();
+    /// map.insert(1, "foo".to_string());
+    /// let x = map.get_mut(&1).unwrap();
+    /// *x = "bar".to_string();
+    /// assert_eq!(Some(&"bar".to_string()), map.get(&1));
+    /// ```
     /// [`get_mut`]: HashMap::get_mut
-    pub fn get_mut<Q>(&mut self, k: &Q) -> Option<&mut V>
+    pub fn get_mut<Q: ?Sized>(&mut self, k: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -214,6 +244,13 @@ where
     }
     ///inserts a new value, pairs it to a list of keys, and returns the values that existed
     /// at each key if there are no other keys to that value.
+    /// ```
+    /// use multi_key_map::MultiKeyMap;
+    /// let mut map = MultiKeyMap::new();
+    /// map.insert_many(vec![1, 2],"foo".to_string());
+    /// assert_eq!(Some(&"foo".to_string()), map.get(&1));
+    /// assert_eq!(Some(&"foo".to_string()), map.get(&2));
+    /// ```
     pub fn insert_many(&mut self, ks: Vec<K>, v: V) -> Vec<V> {
         let mut bumped = vec![];
         let new_idx = self.max_index;
@@ -242,7 +279,7 @@ where
     }
     ///Removes a key from the map, returning the value at that key if it existed in the map
     /// and no other keys share that value.
-    pub fn remove<Q>(&mut self, k: &Q) -> Option<V>
+    pub fn remove<Q: ?Sized>(&mut self, k: &Q) -> Option<V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -265,7 +302,7 @@ where
     }
     ///Removes a list of keys from the map, returning the values at each key if they existed in the map
     /// and no other keys shared that value.
-    pub fn remove_many<Q>(&mut self, ks: &[Q]) -> Vec<V>
+    pub fn remove_many<Q: ?Sized, const N: usize>(&mut self, ks: [&Q; N]) -> Vec<V>
     where
         K: Borrow<Q>,
         Q: Hash + Eq,
@@ -340,15 +377,22 @@ where
 {
 }
 
-impl<'a, K, V> Extend<(&'a[K], &'a V)> for MultiKeyMap<K, V> where K: Hash + Eq + Copy, V: Copy{
-    fn extend<T: IntoIterator<Item = (&'a[K], &'a V)>>(&mut self, iter: T) {
+impl<'a, K, V> Extend<(&'a [K], &'a V)> for MultiKeyMap<K, V>
+where
+    K: Hash + Eq + Copy,
+    V: Copy,
+{
+    fn extend<T: IntoIterator<Item = (&'a [K], &'a V)>>(&mut self, iter: T) {
         for (ks, v) in iter {
             self.insert_many(ks.to_vec(), *v);
         }
     }
 }
 
-impl<K, V> Extend<(Vec<K>, V)> for MultiKeyMap<K, V> where K: Hash + Eq {
+impl<K, V> Extend<(Vec<K>, V)> for MultiKeyMap<K, V>
+where
+    K: Hash + Eq,
+{
     fn extend<T: IntoIterator<Item = (Vec<K>, V)>>(&mut self, iter: T) {
         for (ks, v) in iter {
             self.insert_many(ks, v);

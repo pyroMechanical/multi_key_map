@@ -18,9 +18,9 @@
 //!
 //! [`RefCell`]: std::cell::RefCell
 
+use core::hash::Hash;
 pub use entry::{Entry, OccupiedEntry, VacantEntry};
 pub use iter::Iter;
-use core::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 /// Provides types and methods for the Entry API. for more information, see [`entry`] for more info.
@@ -359,14 +359,11 @@ where
     V: PartialEq,
 {
     fn eq(&self, rhs: &Self) -> bool {
-        if self.keys.len() != rhs.keys.len() {
+        if self.keys.len() != rhs.keys.len() || self.data.len() != rhs.data.len() {
             return false;
-        } else if self.data.len() != rhs.data.len() {
-            return false;
-        } else {
-            self.iter()
-                .all(|(key, value)| rhs.get(key).map_or(false, |v| *value == *v))
         }
+        self.iter()
+            .all(|(key, value)| rhs.get(key).map_or(false, |v| *value == *v))
     }
 }
 

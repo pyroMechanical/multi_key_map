@@ -117,3 +117,12 @@ fn entry_default_test() {
     map.entry(7).or_default();
     assert_eq!(Some(&String::new()), map.get(&7));
 }
+
+#[test]
+fn example_test() {
+    let mut map: MultiKeyMap<i32, String> =
+        MultiKeyMap::from([(vec![1, 2, 3], "foo".into()), (vec![4, 5], "bar".into())]);
+    map.insert_many(vec![6, 7], "quux".into());
+    map.alias(&7, 8);
+    assert_eq!(map.get(&8), Some(&String::from("quux")));
+}

@@ -1,10 +1,36 @@
+//! Provides [MultiKeyMap], an associative array that can share one value
+//! across multiple keys without [`Rc`], and provides mutable access
+//! that can never panic at compile time, unlike [`RefCell`].
+//!
+//! ```
+//! use multi_key_map::MultiKeyMap;
+//!
+//! let mut map: MultiKeyMap<i32, String> = MultiKeyMap::from([
+//!     (vec![1, 2, 3], "foo".into()),
+//!     (vec![4, 5], "bar".into()),
+//! ]);
+//! map.insert_many(vec![6, 7], "quux".into());
+//! map.alias(&7, 8);
+//! assert_eq!(map.get(&8), Some(&String::from("quux")));
+//! ```
+//!
+//! [`Rc`]: std::rc::Rc
+//!
+//! [`RefCell`]: std::cell::RefCell
+
+use crate::entry::{Entry, OccupiedEntry, VacantEntry};
 use core::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;
-
-use crate::entry::{Entry, OccupiedEntry, VacantEntry};
-
+/// Provides types and methods for the Entry API. for more information, see [`entry`] for more info.
+///
+/// [`entry`]: MultiKeyMap::entry
 pub mod entry;
+/// Provides [`Iter`], an iterator over all keys and values. see [`iter`] for more info.
+///
+/// [`Iter`]: iter::Iter
+/// 
+/// [`iter`]: MultiKeyMap::iter
 pub mod iter;
 #[cfg(test)]
 mod tests;
@@ -29,7 +55,10 @@ where
     max_index: Index,
 }
 
-impl<K, V> Default for MultiKeyMap<K, V> where K: Hash + Eq {
+impl<K, V> Default for MultiKeyMap<K, V>
+where
+    K: Hash + Eq,
+{
     fn default() -> Self {
         MultiKeyMap {
             keys: HashMap::new(),
@@ -44,7 +73,9 @@ where
     K: Hash + Eq,
 {
     ///Creates an empty [MultiKeyMap].
-    pub fn new() -> Self {Default::default()}
+    pub fn new() -> Self {
+        Default::default()
+    }
 
     pub(crate) fn next_index(&mut self) -> Index {
         let idx = self.max_index;
@@ -121,31 +152,31 @@ where
         }
     }
     ///An iterator visiting all keys in an arbitrary order. Equivalent to [HashMap]::[`keys`].
-    /// 
+    ///
     /// [`keys`]: HashMap::keys
     pub fn keys(&self) -> impl Iterator<Item = &K> {
         self.keys.keys()
     }
     ///An iterator visiting all elements in an arbitrary order. Equivalent to [HashMap]::[`values`].
-    /// 
+    ///
     /// [`values`]: HashMap::values
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.data.values().map(|(_, v)| v)
     }
     ///An iterator visiting all elements in an arbitrary order, while allowing mutation. Equivalent to [HashMap]::[`values_mut`].
-    /// 
+    ///
     /// [`values_mut`]: HashMap::values_mut
     pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
         self.data.values_mut().map(|(_, v)| v)
     }
     ///Consumes the map and provides an iterator over all keys. Equivalent to [HashMap]::[`into_keys`].
-    /// 
+    ///
     /// [`into_keys`]: HashMap::into_keys
     pub fn into_keys(self) -> impl Iterator<Item = K> {
         self.keys.into_keys()
     }
     ///Consumes the map and provides an iterator over all values. Equivalent to [HashMap]::[`into_values`].
-    /// 
+    ///
     /// [`into_values`]: HashMap::into_values
     pub fn into_values(self) -> impl Iterator<Item = V> {
         self.data.into_values().map(|(_, v)| v)
@@ -156,7 +187,7 @@ where
         iter::Iter::new(self)
     }
     ///Returns a shared reference to the value of the key. Equivalent to [HashMap]::[`get`].
-    /// 
+    ///
     /// [`get`]: HashMap::get
     pub fn get<Q>(&self, k: &Q) -> Option<&V>
     where
@@ -169,7 +200,7 @@ where
             .map(|(_, v)| v)
     }
     ///Returns a mutable reference to the value of the key. Equivalent to [HashMap]::[`get_mut`].
-    /// 
+    ///
     /// [`get_mut`]: HashMap::get_mut
     pub fn get_mut<Q>(&mut self, k: &Q) -> Option<&mut V>
     where
@@ -248,7 +279,7 @@ where
         bumped
     }
     ///Equivalent to [HashMap]::[`entry`].
-    /// 
+    ///
     /// [`entry`]: HashMap::entry
     pub fn entry(&mut self, k: K) -> Entry<K, V> {
         if let Some(idx) = self.keys.get(&k) {
@@ -282,5 +313,45 @@ where
             map.insert_many(keys, value);
         }
         map
+    }
+}
+
+impl<K, V> PartialEq for MultiKeyMap<K, V>
+where
+    K: Hash + Eq,
+    V: PartialEq,
+{
+    fn eq(&self, rhs: &Self) -> bool {
+        if self.keys.len() != rhs.keys.len() {
+            return false;
+        } else if self.data.len() != rhs.data.len() {
+            return false;
+        } else {
+            self.iter()
+                .all(|(key, value)| rhs.get(key).map_or(false, |v| *value == *v))
+        }
+    }
+}
+
+impl<K, V> Eq for MultiKeyMap<K, V>
+where
+    K: Hash + Eq,
+    V: Eq,
+{
+}
+
+impl<'a, K, V> Extend<(&'a[K], &'a V)> for MultiKeyMap<K, V> where K: Hash + Eq + Copy, V: Copy{
+    fn extend<T: IntoIterator<Item = (&'a[K], &'a V)>>(&mut self, iter: T) {
+        for (ks, v) in iter {
+            self.insert_many(ks.to_vec(), *v);
+        }
+    }
+}
+
+impl<K, V> Extend<(Vec<K>, V)> for MultiKeyMap<K, V> where K: Hash + Eq {
+    fn extend<T: IntoIterator<Item = (Vec<K>, V)>>(&mut self, iter: T) {
+        for (ks, v) in iter {
+            self.insert_many(ks, v);
+        }
     }
 }

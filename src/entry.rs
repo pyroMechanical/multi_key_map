@@ -1,9 +1,9 @@
-use crate::{MultiKeyMap, Index};
+use crate::{Index, MultiKeyMap};
 use std::hash::Hash;
 
 ///Enum representing an entry into a [MultiKeyMap]. May be either vacant or occupied.
 /// created by [MultiKeyMap]::[`entry`].
-/// 
+///
 /// [`entry`]: MultiKeyMap::entry
 #[allow(dead_code)]
 pub enum Entry<'a, K, V>
@@ -117,7 +117,7 @@ where
     }
     /// Provides a mutable reference to the value of the entry. If you need a reference
     /// that outlasts the lifetime of the entry, try using `[OccupiedEntry]::[`into_mut`].
-    /// 
+    ///
     /// [`into_mut`]: OccupiedEntry::into_mut
     pub fn get_mut(&mut self) -> &mut V {
         self.map.data.get_mut(&self.idx).map(|(_, v)| v).unwrap()

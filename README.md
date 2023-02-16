@@ -1,1 +1,1 @@
-A many-key-single-value hash table for Rust.
+a hash table that shares one value across multiple keys.

@@ -22,6 +22,7 @@ use core::hash::Hash;
 pub use entry::{Entry, OccupiedEntry, VacantEntry};
 pub use iter::Iter;
 use std::borrow::Borrow;
+use std::fmt::Debug;
 use std::collections::HashMap;
 /// Provides types and methods for the Entry API. for more information, see [`entry`] for more info.
 ///
@@ -372,6 +373,16 @@ where
     K: Hash + Eq,
     V: Eq,
 {
+}
+
+impl<K, V> Debug for MultiKeyMap<K, V> 
+where 
+    K: Hash + Eq + Debug, 
+    V: Debug 
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_map().entries(self.iter()).finish()
+    }
 }
 
 impl<'a, K, V> Extend<(&'a [K], &'a V)> for MultiKeyMap<K, V>

@@ -1,6 +1,6 @@
 [package]
 name = "multi_key_map"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "BSD-3-Clause-Clear"
 description = "a hash table that shares one value across multiple keys."

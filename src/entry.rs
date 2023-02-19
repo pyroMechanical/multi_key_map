@@ -147,15 +147,15 @@ where
     K: Hash + Eq,
 {
     /// Returns a reference to the vacant entry's key.
-    fn key(&self) -> &K {
+    pub fn key(&self) -> &K {
         &self.key
     }
     /// Consumes the entry, returning the key provided to create it.
-    fn into_key(self) -> K {
+    pub fn into_key(self) -> K {
         self.key
     }
     /// Inserts the provided value at the vacant entry.
-    fn insert(self, value: V) -> &'a mut V {
+    pub fn insert(self, value: V) -> &'a mut V {
         let idx = self.map.next_index();
         self.map.keys.insert(self.key, idx);
         self.map.data.insert(idx, (1, value));
